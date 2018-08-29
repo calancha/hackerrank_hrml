@@ -147,12 +147,53 @@ void fill_tags(vector<st_tag> &tags, vector<string> lines)
   }
 }
 
-const st_tag &find_tag_by_name(string name, vector<st_tag> &tags)
+string current_tag_name(const string &call)
 {
+  string ctag = call;
+  if (call.find(".") != string::npos)
+    ctag = call.substr(call.find_last_of(".")+1, string::npos);
+  return ctag;
+}
+
+bool right_call_p(const string query, const st_tag &tag)
+{
+  string call = query.substr(0, query.find("~"));
+  return call.compare(tag.call) == 0;
+}
+
+string get_val_from_query(string query, const st_tag &tag)
+{
+  string val("");
+  string key = query.substr(query.find("~") + 1);
+  size_t val_pos = get_val(key, tag);
+  if (val_pos != tag.values.size())
+    val = tag.values.at(val_pos);
+  return val;
+}
+
+const st_tag &find_tag_by_name(string query, vector<st_tag> &tags)
+{
+  
+  string name = current_tag_name( query.substr(0, query.find("~")) );
   auto it = find_if(tags.begin(),
                     tags.end(),
                     [&name](st_tag &tag) { return name.compare(tag.name) == 0; });
   return *it;
+}
+
+void process_query(size_t idx, vector<string> queries, vector<st_tag> doc_tags)
+{
+  string query = queries.at(idx);
+  const st_tag &tag = find_tag_by_name(query, doc_tags);
+  if (!right_call_p(query, tag)) {
+    cout << "Not Found!" << endl;
+    return;
+  }
+  string val = get_val_from_query(query, tag);
+  if (!val.empty()) {
+    cout << val << endl;
+  } else
+    cout << "Not Found!" << endl;
 }
 
 int main() {
@@ -183,23 +224,7 @@ int main() {
   vector<st_tag> doc_tags;
   fill_tags(doc_tags, lines);
   for (size_t i=0;i<queries.size();++i) {
-    string query = queries.at(i);
-    string call = query.substr(0, query.find("~"));
-    string ctag = call;
-    if (call.find(".") != string::npos)
-      ctag = call.substr(call.find_last_of(".")+1, string::npos);
-    const st_tag &tag = find_tag_by_name(ctag, doc_tags);
-    if (call.compare(tag.call) != 0) {
-      cout << "Not Found!" << endl;
-      continue;
-    }
-    string key = query.substr(query.find("~") + 1);
-    size_t val_pos = get_val(key, tag);
-    if (val_pos != tag.values.size()) {
-      string val = tag.values.at(val_pos);
-      cout << val << endl;
-    } else
-      cout << "Not Found!" << endl;
+    process_query(i, queries, doc_tags);
   }
 
 #ifdef DEBUG
