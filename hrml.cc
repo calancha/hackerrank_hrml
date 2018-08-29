@@ -105,7 +105,7 @@ public:
     return call.compare(get_call()) == 0;
   }
 
-  size_t get_val(string key)
+  size_t get_value(string key)
   {
     vector<string> keys = this->get_keys();
     vector<string> values = this->get_values();
@@ -118,11 +118,11 @@ public:
       return it - keys.begin();
   }
 
-  string get_val_from_query(string query)
+  string get_value_from_query(string query)
   {
     string val("");
     string key = query.substr(query.find("~") + 1);
-    size_t val_pos = get_val(key);
+    size_t val_pos = get_value(key);
     if (val_pos != this->get_values().size())
       val = this->get_values().at(val_pos);
     return val;
@@ -219,7 +219,7 @@ public:
       cout << "Not Found!" << endl;
       return;
     }
-    string val = tag.get_val_from_query(query);
+    string val = tag.get_value_from_query(query);
     if (!val.empty()) {
       cout << val << endl;
     } else
