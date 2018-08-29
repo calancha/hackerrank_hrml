@@ -18,7 +18,9 @@ using namespace std;
 // Every reference to the attributes in the Q queries contains at max 200 characters.
 // All tag names are unique and the HRML source program is logically correct.
 // A tag can have no attributes as well.
-  
+
+
+// Custom split string
 vector<string> split(const string &s, char delim)
 {
   // line: value = "BadVal" size = "10"
@@ -48,17 +50,8 @@ vector<string> split(const string &s, char delim)
   return elems;
 }
 
-vector<string> attributes(string line)
-{
-  size_t val_start = line.find(" ");
-  if (line[1] == '/' || val_start == string::npos)
-    return vector<string>();
-  line.erase(0, val_start + 1);
-  line.pop_back();
-  vector<string> key_val = split(line, '=');
-  return key_val;
-}
-
+
+// Tag Class
 class HRMLTag {
 private:
   string name;
@@ -73,7 +66,7 @@ public:
     values = vector<string>();
     child = "";
     call = "";
-    }
+  }
   string get_name() { return name; }
   vector<string> get_keys() { return keys; }
   vector<string> get_values() { return values; }
@@ -81,10 +74,59 @@ public:
   string get_call() { return call; }
 
   void set_name(string str) { name = str; }
-  void set_keys(vector<string> vec) { keys = vec; }
-  void set_values(vector<string> vec) { values = vec; }
   void set_child(string str) { child = str; }
   void set_call(string str) { call = str; }
+
+  vector<string> attributes(string line)
+  {
+    size_t val_start = line.find(" ");
+    if (line[1] == '/' || val_start == string::npos)
+      return vector<string>();
+    line.erase(0, val_start + 1);
+    line.pop_back();
+    vector<string> key_val = split(line, '=');
+    return key_val;
+  }
+
+  void set_key_vals(string line)
+  {
+    vector<string> key_val = attributes(line);
+    for (size_t i=0;i<key_val.size();++i) {
+      if (i%2==0)
+        keys.push_back(key_val[i]);
+      else
+        values.push_back(key_val[i]);
+    }
+  }
+
+  bool check_call_p(const string query)
+  {
+    string call = query.substr(0, query.find("~"));
+    return call.compare(get_call()) == 0;
+  }
+
+  size_t get_val(string key)
+  {
+    vector<string> keys = this->get_keys();
+    vector<string> values = this->get_values();
+    auto it = find_if(keys.begin(),
+                      keys.end(),
+                      [&key](string &s) { return s.compare(key) == 0; });
+    if (it == keys.end())
+      return values.size();
+    else
+      return it - keys.begin();
+  }
+
+  string get_val_from_query(string query)
+  {
+    string val("");
+    string key = query.substr(query.find("~") + 1);
+    size_t val_pos = get_val(key);
+    if (val_pos != this->get_values().size())
+      val = this->get_values().at(val_pos);
+    return val;
+  }
 
 };
 
@@ -93,30 +135,6 @@ string get_name(string line)
   if (line[1] == '/') return "";
   size_t end_name = min(line.find(' '), line.find('>'));
   return line.substr(1, end_name - 1);
-}
-
-void get_key_vals(vector<string> &keys, vector<string> &values, string line)
-{
-  vector<string> key_val = attributes(line);
-  for (size_t i=0;i<key_val.size();++i) {
-    if (i%2==0)
-      keys.push_back(key_val[i]);
-    else
-      values.push_back(key_val[i]);
-  }
-}
-
-size_t get_val(string key, HRMLTag &tag)
-{
-  vector<string> keys = tag.get_keys();
-  vector<string> values = tag.get_values();
-  auto it = find_if(keys.begin(),
-                    keys.end(),
-                    [&key](string &s) { return s.compare(key) == 0; });
-  if (it == keys.end())
-    return values.size();
-  else
-    return it - keys.begin();
 }
 
 string get_child_name(size_t idx, vector<string> lines)
@@ -146,74 +164,75 @@ string get_call(size_t idx, vector<string> lines)
   return res;
 }
 
-void fill_tags(vector<HRMLTag> &tags, vector<string> lines)
-{
-  for (size_t i=0;i<lines.size();++i) {
-    string line = lines[i];
-    HRMLTag node;
-    if (line[1] == '/') continue;
-    string name = get_name(line);
-    vector<string> keys;
-    vector<string> values;
-    get_key_vals(keys, values, line);
-    
-    node.set_name(name);
-    node.set_keys(keys);
-    node.set_values(values);
-    node.set_child( get_child_name(i, lines) );
-    node.set_call( get_call(i, lines) );
-    tags.push_back(node);
+
+
+// Document Tag class
+class HRMLDoc {
+private:
+  vector<HRMLTag> tags;
+public:
+  HRMLDoc() { tags = vector<HRMLTag>(); }
+
+  void fill_tags (vector<string> lines)
+  {
+    for (size_t i=0;i<lines.size();++i) {
+      string line = lines[i];
+      HRMLTag node;
+      if (line[1] == '/') continue;
+      string name = get_name(line);
+      node.set_key_vals(line);
+      node.set_name(name);
+      node.set_child(get_child_name(i, lines));
+      node.set_call(get_call(i, lines));
+      tags.push_back(node);
+    }
   }
-}
 
-string current_tag_name(const string &call)
-{
-  string ctag = call;
-  if (call.find(".") != string::npos)
-    ctag = call.substr(call.find_last_of(".")+1, string::npos);
-  return ctag;
-}
-
-bool right_call_p(const string query, HRMLTag &tag)
-{
-  string call = query.substr(0, query.find("~"));
-  return call.compare(tag.get_call()) == 0;
-}
-
-string get_val_from_query(string query, HRMLTag &tag)
-{
-  string val("");
-  string key = query.substr(query.find("~") + 1);
-  size_t val_pos = get_val(key, tag);
-  if (val_pos != tag.get_values().size())
-    val = tag.get_values().at(val_pos);
-  return val;
-}
-
-HRMLTag &find_tag_by_name(string query, vector<HRMLTag> &tags)
-{
+  HRMLDoc (vector<string> lines)
+  {
+    tags = vector<HRMLTag>();
+    fill_tags(lines);
+  }
   
-  string name = current_tag_name( query.substr(0, query.find("~")) );
-  auto it = find_if(tags.begin(),
-                    tags.end(),
-                    [&name](HRMLTag &tag) { return name.compare(tag.get_name()) == 0; });
-  return *it;
-}
-
-void process_query(size_t idx, vector<string> queries, vector<HRMLTag> doc_tags)
-{
-  string query = queries.at(idx);
-  HRMLTag &tag = find_tag_by_name(query, doc_tags);
-  if (!right_call_p(query, tag)) {
-    cout << "Not Found!" << endl;
-    return;
+  string extract_tag_name_from_query(const string &query)
+  {
+    string ctag = query.substr(0, query.find("~"));
+    if (ctag.find(".") != string::npos)
+      ctag = ctag.substr(ctag.find_last_of(".")+1, string::npos);
+    return ctag;
   }
-  string val = get_val_from_query(query, tag);
-  if (!val.empty()) {
-    cout << val << endl;
-  } else
-    cout << "Not Found!" << endl;
-}
+
+  HRMLTag &find_tag_by_name(string query)
+  {
+    string name = extract_tag_name_from_query(query);
+    auto it = find_if(tags.begin(),
+                      tags.end(),
+                      [&name](HRMLTag &tag) { return name.compare(tag.get_name()) == 0; });
+    return *it;
+  }
+
+  void process_query(size_t idx, vector<string> queries)
+  {
+    string query = queries.at(idx);
+    HRMLTag &tag = find_tag_by_name(query);
+    if (!tag.check_call_p(query)) {
+      cout << "Not Found!" << endl;
+      return;
+    }
+    string val = tag.get_val_from_query(query);
+    if (!val.empty()) {
+      cout << val << endl;
+    } else
+      cout << "Not Found!" << endl;
+  }
+
+  void process_queries (vector<string> queries)
+  {
+    for (size_t i=0;i<queries.size();++i)
+      process_query(i, queries);
+  }
+    
+};
 
 int main() {
   /* Enter your code here. Read input from STDIN. Print output to STDOUT */
@@ -240,11 +259,8 @@ int main() {
     getline(INFILE, line);
     queries.push_back(line);
   }
-  vector<HRMLTag> doc_tags;
-  fill_tags(doc_tags, lines);
-  for (size_t i=0;i<queries.size();++i) {
-    process_query(i, queries, doc_tags);
-  }
+  HRMLDoc doc_tags(lines);
+  doc_tags.process_queries(queries);
 
 #ifdef DEBUG
   inFile.close();
