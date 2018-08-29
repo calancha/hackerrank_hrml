@@ -131,70 +131,47 @@ public:
 
 };
 
-string get_name(string line)
-{
-  if (line[1] == '/') return "";
-  size_t end_name = min(line.find(' '), line.find('>'));
-  return line.substr(1, end_name - 1);
-}
-
-string get_child_name(size_t idx, vector<string> lines)
-{
-  if (idx == lines.size() - 1) return "";
-  if (lines[idx+1][1] == '/') return "";
-  return get_name(lines[idx+1]);
-}
-
-string get_call(size_t idx, vector<string> lines)
-{
-  vector<string> parents;
-  for (size_t i=0;i<idx;++i) {
-    string line = lines[i];
-    string tag_name = get_name(line);
-    if (line[1] == '/') {
-      parents.pop_back();
-    } else {
-      parents.push_back(tag_name);      
-    }
-  }
-  string res;
-  for (const auto &e : parents) res += e + ".";
-  res += get_name(lines[idx]) + ".";
-  if (!res.empty()) res.pop_back();
-
-  return res;
-}
-
 
 
 // Document Tag class
 class HRMLDoc {
 private:
   vector<HRMLTag> tags;
-public:
-  HRMLDoc() { tags = vector<HRMLTag>(); }
 
-  void fill_tags (vector<string> lines)
+  string extract_name(string line)
   {
-    for (size_t i=0;i<lines.size();++i) {
+    if (line[1] == '/') return "";
+    size_t end_name = min(line.find(' '), line.find('>'));
+    return line.substr(1, end_name - 1);
+  }
+
+  string extract_child_name(size_t idx, vector<string> lines)
+  {
+    if (idx == lines.size() - 1) return "";
+    if (lines[idx+1][1] == '/') return "";
+    return extract_name(lines[idx+1]);
+  }
+
+  string extract_call(size_t idx, vector<string> lines)
+  {
+    vector<string> parents;
+    for (size_t i=0;i<idx;++i) {
       string line = lines[i];
-      HRMLTag node;
-      if (line[1] == '/') continue;
-      string name = get_name(line);
-      node.set_key_values(line);
-      node.set_name(name);
-      node.set_child(get_child_name(i, lines));
-      node.set_call(get_call(i, lines));
-      tags.push_back(node);
+      string tag_name = extract_name(line);
+      if (line[1] == '/') {
+        parents.pop_back();
+      } else {
+        parents.push_back(tag_name);      
+      }
     }
+    string res;
+    for (const auto &e : parents) res += e + ".";
+    res += extract_name(lines[idx]) + ".";
+    if (!res.empty()) res.pop_back();
+
+    return res;
   }
 
-  HRMLDoc (vector<string> lines)
-  {
-    tags = vector<HRMLTag>();
-    fill_tags(lines);
-  }
-  
   string extract_tag_name_from_query(const string &query)
   {
     string ctag = query.substr(0, query.find("~"));
@@ -227,6 +204,30 @@ public:
       cout << "Not Found!" << endl;
   }
 
+  void fill_tags (vector<string> lines)
+  {
+    for (size_t i=0;i<lines.size();++i) {
+      string line = lines[i];
+      HRMLTag node;
+      if (line[1] == '/') continue;
+      string name = extract_name(line);
+      node.set_key_values(line);
+      node.set_name(name);
+      node.set_child(extract_child_name(i, lines));
+      node.set_call(extract_call(i, lines));
+      tags.push_back(node);
+    }
+  }
+
+public:
+  HRMLDoc() { tags = vector<HRMLTag>(); }
+
+  HRMLDoc (vector<string> lines)
+  {
+    tags = vector<HRMLTag>();
+    fill_tags(lines);
+  }
+  
   void process_queries (vector<string> queries)
   {
     for (size_t i=0;i<queries.size();++i)
