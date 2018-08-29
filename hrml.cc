@@ -88,7 +88,7 @@ public:
     return key_val;
   }
 
-  void set_key_vals(string line)
+  void set_key_values(string line)
   {
     vector<string> key_val = attributes(line);
     for (size_t i=0;i<key_val.size();++i) {
@@ -180,7 +180,7 @@ public:
       HRMLTag node;
       if (line[1] == '/') continue;
       string name = get_name(line);
-      node.set_key_vals(line);
+      node.set_key_values(line);
       node.set_name(name);
       node.set_child(get_child_name(i, lines));
       node.set_call(get_call(i, lines));
