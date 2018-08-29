@@ -59,15 +59,34 @@ vector<string> attributes(string line)
   return key_val;
 }
 
-struct Tag {
+class HRMLTag {
+private:
   string name;
   vector<string> keys;
   vector<string> values;
   string child;
   string call;
-};
+public:
+  HRMLTag() {
+    name = "";
+    keys = vector<string>();
+    values = vector<string>();
+    child = "";
+    call = "";
+    }
+  string get_name() { return name; }
+  vector<string> get_keys() { return keys; }
+  vector<string> get_values() { return values; }
+  string get_child() { return child; }
+  string get_call() { return call; }
 
-typedef struct Tag st_tag;
+  void set_name(string str) { name = str; }
+  void set_keys(vector<string> vec) { keys = vec; }
+  void set_values(vector<string> vec) { values = vec; }
+  void set_child(string str) { child = str; }
+  void set_call(string str) { call = str; }
+
+};
 
 string get_name(string line)
 {
@@ -87,10 +106,10 @@ void get_key_vals(vector<string> &keys, vector<string> &values, string line)
   }
 }
 
-size_t get_val(string key, st_tag tag)
+size_t get_val(string key, HRMLTag &tag)
 {
-  vector<string> keys = tag.keys;
-  vector<string> values = tag.values;
+  vector<string> keys = tag.get_keys();
+  vector<string> values = tag.get_values();
   auto it = find_if(keys.begin(),
                     keys.end(),
                     [&key](string &s) { return s.compare(key) == 0; });
@@ -127,22 +146,22 @@ string get_call(size_t idx, vector<string> lines)
   return res;
 }
 
-void fill_tags(vector<st_tag> &tags, vector<string> lines)
+void fill_tags(vector<HRMLTag> &tags, vector<string> lines)
 {
   for (size_t i=0;i<lines.size();++i) {
     string line = lines[i];
-    st_tag node;
+    HRMLTag node;
     if (line[1] == '/') continue;
     string name = get_name(line);
     vector<string> keys;
     vector<string> values;
     get_key_vals(keys, values, line);
     
-    node.name = name;
-    node.keys = keys;
-    node.values = values;
-    node.child = get_child_name(i, lines);
-    node.call = get_call(i, lines);
+    node.set_name(name);
+    node.set_keys(keys);
+    node.set_values(values);
+    node.set_child( get_child_name(i, lines) );
+    node.set_call( get_call(i, lines) );
     tags.push_back(node);
   }
 }
@@ -155,36 +174,36 @@ string current_tag_name(const string &call)
   return ctag;
 }
 
-bool right_call_p(const string query, const st_tag &tag)
+bool right_call_p(const string query, HRMLTag &tag)
 {
   string call = query.substr(0, query.find("~"));
-  return call.compare(tag.call) == 0;
+  return call.compare(tag.get_call()) == 0;
 }
 
-string get_val_from_query(string query, const st_tag &tag)
+string get_val_from_query(string query, HRMLTag &tag)
 {
   string val("");
   string key = query.substr(query.find("~") + 1);
   size_t val_pos = get_val(key, tag);
-  if (val_pos != tag.values.size())
-    val = tag.values.at(val_pos);
+  if (val_pos != tag.get_values().size())
+    val = tag.get_values().at(val_pos);
   return val;
 }
 
-const st_tag &find_tag_by_name(string query, vector<st_tag> &tags)
+HRMLTag &find_tag_by_name(string query, vector<HRMLTag> &tags)
 {
   
   string name = current_tag_name( query.substr(0, query.find("~")) );
   auto it = find_if(tags.begin(),
                     tags.end(),
-                    [&name](st_tag &tag) { return name.compare(tag.name) == 0; });
+                    [&name](HRMLTag &tag) { return name.compare(tag.get_name()) == 0; });
   return *it;
 }
 
-void process_query(size_t idx, vector<string> queries, vector<st_tag> doc_tags)
+void process_query(size_t idx, vector<string> queries, vector<HRMLTag> doc_tags)
 {
   string query = queries.at(idx);
-  const st_tag &tag = find_tag_by_name(query, doc_tags);
+  HRMLTag &tag = find_tag_by_name(query, doc_tags);
   if (!right_call_p(query, tag)) {
     cout << "Not Found!" << endl;
     return;
@@ -221,7 +240,7 @@ int main() {
     getline(INFILE, line);
     queries.push_back(line);
   }
-  vector<st_tag> doc_tags;
+  vector<HRMLTag> doc_tags;
   fill_tags(doc_tags, lines);
   for (size_t i=0;i<queries.size();++i) {
     process_query(i, queries, doc_tags);
