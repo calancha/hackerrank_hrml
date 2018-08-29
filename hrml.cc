@@ -59,6 +59,18 @@ private:
   vector<string> values;
   string child;
   string call;
+
+  vector<string> attributes(string line)
+  {
+    size_t val_start = line.find(" ");
+    if (line[1] == '/' || val_start == string::npos)
+      return vector<string>();
+    line.erase(0, val_start + 1);
+    line.pop_back();
+    vector<string> key_val = split(line, '=');
+    return key_val;
+  }
+
 public:
   HRMLTag() {
     name = "";
@@ -76,17 +88,6 @@ public:
   void set_name(string str) { name = str; }
   void set_child(string str) { child = str; }
   void set_call(string str) { call = str; }
-
-  vector<string> attributes(string line)
-  {
-    size_t val_start = line.find(" ");
-    if (line[1] == '/' || val_start == string::npos)
-      return vector<string>();
-    line.erase(0, val_start + 1);
-    line.pop_back();
-    vector<string> key_val = split(line, '=');
-    return key_val;
-  }
 
   void set_key_values(string line)
   {
