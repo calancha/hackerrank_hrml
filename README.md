@@ -1,6 +1,6 @@
-# hackerrank attribute-parser
+# HackerRank attribute-parser
 
-A C++ solution to hackerrank attribute-parser problem:
+A C++ solution to HackerRank attribute-parser problem:
 https://www.hackerrank.com/challenges/attribute-parser/
 
 To run in HackerRank site, comment out the line:
