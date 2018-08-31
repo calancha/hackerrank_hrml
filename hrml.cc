@@ -240,14 +240,12 @@ int main() {
   /* Enter your code here. Read input from STDIN. Print output to STDOUT */
 #ifdef DEBUG
   ifstream inFile;
-  inFile.open("hrml.data");
-#endif
-  int t, q;
-#ifdef DEBUG
 #define INFILE inFile
+  INFILE.open("hrml.data");
 #else
 #define INFILE cin
-#endif  
+#endif
+  int t, q;
   INFILE >> t >> q;
   string line;
   getline(INFILE, line);
